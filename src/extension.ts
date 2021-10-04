@@ -3,20 +3,23 @@
 import * as vscode from "vscode";
 import { App } from "./app";
 
-type Handler = (...args: any[]) => Promise<any>;
-
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
-export function activate(context: vscode.ExtensionContext) {
+export async function activate(context: vscode.ExtensionContext) {
   const app = new App(context);
-  app.randomTitle();
+  app.activate();
 
-  const disposable = vscode.commands.registerCommand(
+  const randomTitle = vscode.commands.registerCommand(
     "vscode-random-title.randomTitle",
     app.randomTitle,
   );
 
-  context.subscriptions.push(disposable);
+  const previousTitle = vscode.commands.registerCommand(
+    "vscode-random-title.previousTitle",
+    app.previousTitle,
+  );
+
+  context.subscriptions.push(randomTitle, previousTitle);
 }
 
 // this method is called when your extension is deactivated

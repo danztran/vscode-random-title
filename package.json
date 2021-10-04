@@ -22,7 +22,11 @@
 		"commands": [
 			{
 				"command": "vscode-random-title.randomTitle",
-				"title": "Random Title"
+				"title": "Title: Random"
+			},
+			{
+				"command": "vscode-random-title.previousTitle",
+				"title": "Title: Previous"
 			}
 		]
 	},

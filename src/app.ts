@@ -1,39 +1,58 @@
 import * as vscode from "vscode";
 import { ExtensionContext } from "vscode";
 import { getQuotes, Quote, RequestQuotes } from "./quotable";
-import * as storage from "./storage/storage";
-import { DefaultLogger, Logger } from "./utils";
+import { DefaultLogger } from "./logger";
+import { Storage } from "./storage/storage";
 
 export class App extends DefaultLogger {
-  private ctx: ExtensionContext;
+  private storage: Storage;
 
-  constructor(context: ExtensionContext) {
+  constructor(ctx: ExtensionContext) {
+    const channel = vscode.window.createOutputChannel("Random Title");
     super({
-      context,
       level: "debug",
+      channel,
     });
-    this.ctx = context;
-    this.getRandomQuote = this.getRandomQuote.bind(this);
+    this.storage = new Storage({ ctx, channel });
     this.randomTitle = this.randomTitle.bind(this);
-    this.fetchNewQuotes = this.fetchNewQuotes.bind(this);
+    this.previousTitle = this.previousTitle.bind(this);
   }
 
   getRandomQuote(): Quote {
-    const quotes = storage.getLocalQuotes(this.ctx);
+    const quotes = this.storage.getLocalQuotes();
     const quote = quotes[Math.floor(Math.random() * quotes.length)];
     return quote;
+  }
+
+  async activate() {
+    this.fetchNewQuotes();
+    if (this.isTitleChanged()) {
+      this.info("skip randomizing because it had changed the title");
+      return;
+    }
+    this.randomTitle();
   }
 
   async randomTitle() {
     this.fetchNewQuotes();
     const quote = this.getRandomQuote();
-    const title = makeTitle(quote);
+    const title = this.makeTitle(quote);
     this.info("new title:", title);
-    await updateTile(title);
+    await this.updateTitle(title);
+  }
+
+  async previousTitle() {
+    const title = this.storage.getPreviousWorkspaceTitle();
+    if (title === "") {
+      vscode.window.showInformationMessage("No more previous title");
+      return;
+    }
+    this.debug("previous title:", title);
+    await this.updateTitle(title);
   }
 
   async fetchNewQuotes() {
-    const updatingAt = storage.getUpdatingAt(this.ctx);
+    const updatingAt = this.storage.getUpdatingAt();
     const ts = Date.now();
     const since = ts - updatingAt;
     if (since < 10000) {
@@ -41,9 +60,9 @@ export class App extends DefaultLogger {
       return;
     }
     this.info(`fetching...`);
-    storage.setUpdatingAt(this.ctx, ts);
+    this.storage.setUpdatingAt(ts);
 
-    const lastRes = storage.getLastResponseGetQuotes(this.ctx);
+    const lastRes = this.storage.getLastResponseGetQuotes();
     const limit = 10;
     let page = lastRes?.page || 0;
     if (lastRes?.results.length === limit) {
@@ -59,44 +78,49 @@ export class App extends DefaultLogger {
     try {
       const resp = await getQuotes(opt);
       this.debug("get quotes response:", resp);
-      storage.saveLastResponseGetQuotes(this.ctx, resp);
+      this.storage.saveLastResponseGetQuotes(resp);
       if (resp.results.length > 0) {
-        const quotes = mergeLocalQuotes(this.ctx, resp.results);
-        storage.saveLocalQuotes(this.ctx, quotes);
+        const quotes = this.mergeLocalQuotes(resp.results);
+        this.storage.saveLocalQuotes(quotes);
         this.debug(`saved ${quotes.length} quotes`);
       }
     } catch (err) {
       this.error(err);
     }
   }
+
+  mergeLocalQuotes(newQuotes: Quote[]): Quote[] {
+    const localQuotes = this.storage.getLocalQuotes();
+    const dict: Record<string, Quote> = {};
+    for (const quote of localQuotes) {
+      dict[quote._id] = quote;
+    }
+    for (const quote of newQuotes) {
+      dict[quote._id] = quote;
+    }
+    const quotes = [];
+    for (const quote of Object.values(dict)) {
+      quotes.push(quote);
+    }
+
+    return quotes;
+  }
+
+  async updateTitle(title: string): Promise<void> {
+    const config = vscode.workspace.getConfiguration("window");
+    await config.update("title", title, false);
+    await this.storage.saveWorkspaceTitle(title);
+  }
+
+  isTitleChanged(): boolean {
+    const workspaceConfig = vscode.workspace.getConfiguration("window");
+    const configTitle = workspaceConfig.get("title");
+    const savedTitle = this.storage.getWorkspaceTitle();
+    return configTitle === savedTitle;
+  }
+
+  makeTitle(quote: Quote) {
+    const title = `“${quote.content}” - ${quote.author}`;
+    return title;
+  }
 }
-
-const updateTile = async (title: string): Promise<void> => {
-  const config = vscode.workspace.getConfiguration();
-  await config.update("window.title", title, vscode.ConfigurationTarget.Global);
-};
-
-const makeTitle = (quote: Quote) => {
-  const title = `“${quote.content}” - ${quote.author}`;
-  return title;
-};
-
-const mergeLocalQuotes = (
-  ctx: ExtensionContext,
-  newQuotes: Quote[],
-): Quote[] => {
-  const localQuotes = storage.getLocalQuotes(ctx);
-  const dict: Record<string, Quote> = {};
-  for (const quote of localQuotes) {
-    dict[quote._id] = quote;
-  }
-  for (const quote of newQuotes) {
-    dict[quote._id] = quote;
-  }
-  const quotes = [];
-  for (const quote of Object.values(dict)) {
-    quotes.push(quote);
-  }
-
-  return quotes;
-};

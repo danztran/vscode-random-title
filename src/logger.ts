@@ -15,32 +15,23 @@ export interface Logger {
 
 export interface LoggerProps {
   name?: string;
-  context: ExtensionContext;
-  channel?: OutputChannel;
+  channel: OutputChannel;
   level?: "info" | "debug";
 }
 
 export class DefaultLogger implements Logger {
   private name: string;
-  private context: ExtensionContext;
   private channel: OutputChannel;
   private level: number;
 
-  constructor({
-    name = "[logger]",
-    channel = vscode.window.createOutputChannel("Random Title"),
-    context,
-    level = "debug",
-  }: LoggerProps) {
+  constructor({ name = "[logger]", level = "debug", channel }: LoggerProps) {
     this.name = name;
     this.debug = this.debug.bind(this);
     this.info = this.info.bind(this);
     this.warn = this.warn.bind(this);
     this.error = this.error.bind(this);
-    this.context = context;
     this.channel = channel;
     this.level = this.parseLevel(level);
-    this.debug("init logger");
   }
 
   debug(...args: unknown[]): void {
