@@ -54,14 +54,19 @@ export class App extends DefaultLogger {
       order: "asc",
       limit,
     };
+    this.debug("get quote options:", opt);
 
-    const resp = await getQuotes(opt);
-    this.debug("get quotes response:", resp);
-    storage.saveLastResponseGetQuotes(this.ctx, resp);
-    if (resp.results.length > 0) {
-      const quotes = mergeLocalQuotes(this.ctx, resp.results);
-      storage.saveLocalQuotes(this.ctx, quotes);
-      this.debug("saved quotes:", quotes);
+    try {
+      const resp = await getQuotes(opt);
+      this.debug("get quotes response:", resp);
+      storage.saveLastResponseGetQuotes(this.ctx, resp);
+      if (resp.results.length > 0) {
+        const quotes = mergeLocalQuotes(this.ctx, resp.results);
+        storage.saveLocalQuotes(this.ctx, quotes);
+        this.debug(`saved ${quotes.length} quotes`);
+      }
+    } catch (err) {
+      this.error(err);
     }
   }
 }

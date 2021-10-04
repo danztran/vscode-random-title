@@ -60,6 +60,12 @@ export class DefaultLogger implements Logger {
   }
 
   log(level: number, ...args: unknown[]): void {
+    args = args.map(e => {
+      if (typeof e === "object") {
+        return JSON.stringify(e);
+      }
+      return e;
+    });
     if (level >= this.level) {
       this.channel.appendLine(`${this.name} ${args.join(" ")}`);
     }

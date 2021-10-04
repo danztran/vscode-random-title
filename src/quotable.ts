@@ -38,15 +38,22 @@ export interface RequestQuotes {
 
 const getJson = async <T>(path: string): Promise<T> => {
   return new Promise((resolve, reject) => {
+    const method = "GET";
+    const hostname = "api.quotable.io";
+    const port = 443;
     const options = {
-      hostname: "api.quotable.io",
-      port: 443,
-      method: "GET",
+      hostname,
+      port,
+      method,
       path,
     };
 
+    const rejectWrap = (err: any) => {
+      reject(`request failed: ${JSON.stringify(options)} / ${err}`);
+    };
+
     const req = request(options, async res =>
-      onJsonRes<T>(res, resolve, reject),
+      onJsonRes<T>(res, resolve, rejectWrap),
     );
 
     req.on("error", err => {
@@ -67,15 +74,14 @@ const onJsonRes = <T>(
   resolve: (value: T | PromiseLike<T>) => void,
   reject: (reason?: any) => void,
 ): void => {
-  const buf: number[] = [];
-  res.on("data", chunk => buf.push(chunk));
+  let buf = "";
+  res.on("data", chunk => (buf += chunk));
   res.on("end", () => {
-    const raw = buf.toString();
     try {
-      const data = JSON.parse(raw);
+      const data = JSON.parse(buf);
       resolve(data);
     } catch (err) {
-      reject(`cannot parse json: ${raw} / ${err}`);
+      reject(`cannot parse json: ${buf} / ${err}`);
     }
   });
 };
