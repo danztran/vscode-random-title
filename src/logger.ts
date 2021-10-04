@@ -1,5 +1,4 @@
-import * as vscode from "vscode";
-import { OutputChannel, ExtensionContext } from "vscode";
+import { OutputChannel } from "vscode";
 
 const DEBUG = 1;
 const INFO = 2;

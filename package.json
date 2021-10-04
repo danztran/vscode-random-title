@@ -28,6 +28,23 @@
 				"command": "vscode-random-title.previousTitle",
 				"title": "Title: Previous"
 			}
+		],
+		"configuration": [
+			{
+				"title": "vscode-utils configs",
+				"properties": {
+					"title.randomOnWorkspaceReload": {
+						"type": "boolean",
+						"enum": [
+							true,
+							false
+						],
+						"default": false,
+						"description": "Random new title on workspace reload",
+						"scope": "application"
+					}
+				}
+			}
 		]
 	},
 	"scripts": {

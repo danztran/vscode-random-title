@@ -26,11 +26,17 @@ export class App extends DefaultLogger {
 
   async activate() {
     this.fetchNewQuotes();
-    if (this.isTitleChanged()) {
+    if (!this.isRandomOnWorkspaceReload() && this.isTitleChanged()) {
       this.info("skip randomizing because it had changed the title");
       return;
     }
     this.randomTitle();
+  }
+
+  isRandomOnWorkspaceReload(): boolean {
+    const { workspace } = vscode;
+    const config = workspace.getConfiguration("title");
+    return config.get("randomOnWorkspaceReload") || false;
   }
 
   async randomTitle() {
