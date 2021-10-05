@@ -31,7 +31,7 @@
 		],
 		"configuration": [
 			{
-				"title": "vscode-utils configs",
+				"title": "vscode-random-title configs",
 				"properties": {
 					"title.randomOnWorkspaceReload": {
 						"type": "boolean",
@@ -41,6 +41,18 @@
 						],
 						"default": false,
 						"description": "Random new title on workspace reload",
+						"scope": "application"
+					},
+					"title.logLevel": {
+						"type": "string",
+						"enum": [
+							"debug",
+							"info",
+							"warn",
+							"error"
+						],
+						"default": "info",
+						"description": "Log level on Random Title extension",
 						"scope": "application"
 					}
 				}

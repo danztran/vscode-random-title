@@ -22,7 +22,10 @@ export class Storage extends DefaultLogger {
   private workspace: Memento;
 
   constructor(props: StorageProps) {
-    super(props);
+    super({
+      ...props,
+      name: "storage",
+    });
     this.global = props.ctx.globalState;
     this.workspace = props.ctx.workspaceState;
   }

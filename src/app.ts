@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 import { ExtensionContext } from "vscode";
 import { getQuotes, Quote, RequestQuotes } from "./quotable";
-import { DefaultLogger } from "./logger";
+import { DefaultLogger, LogLevel } from "./logger";
 import { Storage } from "./storage/storage";
 
 export class App extends DefaultLogger {
@@ -9,11 +9,10 @@ export class App extends DefaultLogger {
 
   constructor(ctx: ExtensionContext) {
     const channel = vscode.window.createOutputChannel("Random Title");
-    super({
-      level: "debug",
-      channel,
-    });
-    this.storage = new Storage({ ctx, channel });
+    super({ channel, name: "app" });
+    const logLevel = this.getConfigLogLevel() as LogLevel;
+    this.setLevel(logLevel);
+    this.storage = new Storage({ ctx, channel, logLevel });
     this.randomTitle = this.randomTitle.bind(this);
     this.previousTitle = this.previousTitle.bind(this);
   }
@@ -25,7 +24,6 @@ export class App extends DefaultLogger {
   }
 
   async activate() {
-    this.fetchNewQuotes();
     if (!this.isRandomOnWorkspaceReload() && this.isTitleChanged()) {
       this.info("skip randomizing because it had changed the title");
       return;
@@ -53,19 +51,22 @@ export class App extends DefaultLogger {
       vscode.window.showInformationMessage("No more previous title");
       return;
     }
-    this.debug("previous title:", title);
+    this.info("previous title:", title);
     await this.updateTitle(title);
   }
 
   async fetchNewQuotes() {
     const updatingAt = this.storage.getUpdatingAt();
+
     const ts = Date.now();
     const since = ts - updatingAt;
     if (since < 10000) {
-      this.info(`skip fetching because it had updated ${since / 1000}s ago`);
+      this.info(`last updating at: ${Math.round(since / 1000)}s ago`);
       return;
     }
-    this.info(`fetching...`);
+    this.info("last updating at:", new Date(updatingAt).toLocaleString());
+
+    this.debug(`fetching new votes...`);
     this.storage.setUpdatingAt(ts);
 
     const lastRes = this.storage.getLastResponseGetQuotes();
@@ -79,16 +80,16 @@ export class App extends DefaultLogger {
       order: "asc",
       limit,
     };
-    this.debug("get quote options:", opt);
+    this.info("fetch quote options:", opt);
 
     try {
       const resp = await getQuotes(opt);
-      this.debug("get quotes response:", resp);
+      this.debug("fetch new quotes size:", resp.results.length);
       this.storage.saveLastResponseGetQuotes(resp);
       if (resp.results.length > 0) {
         const quotes = this.mergeLocalQuotes(resp.results);
         this.storage.saveLocalQuotes(quotes);
-        this.debug(`saved ${quotes.length} quotes`);
+        this.info(`saved ${quotes.length} quotes`);
       }
     } catch (err) {
       this.error(err);
@@ -123,6 +124,12 @@ export class App extends DefaultLogger {
     const configTitle = workspaceConfig.get("title");
     const savedTitle = this.storage.getWorkspaceTitle();
     return configTitle === savedTitle;
+  }
+
+  getConfigLogLevel(): string {
+    const config = vscode.workspace.getConfiguration("title");
+    const level = config.get("logLevel", "info");
+    return level;
   }
 
   makeTitle(quote: Quote) {
