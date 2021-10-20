@@ -5,6 +5,13 @@ const INFO = 2;
 const WARN = 3;
 const ERROR = 4;
 
+const mapLevel: Record<number, string> = {
+  1: "debug",
+  2: "info",
+  3: "warn",
+  4: "error",
+};
+
 export type VoidFunc = (...args: unknown[]) => void;
 
 export type LogLevel = "info" | "debug" | "warn" | "error";
@@ -24,7 +31,6 @@ export class DefaultLogger implements Logger {
   private name: string;
   private channel: OutputChannel;
   private level: number = 1;
-  private logLevel: LogLevel = "debug";
 
   constructor({ name = "default", logLevel = "debug", channel }: LoggerProps) {
     this.name = name;
@@ -37,7 +43,6 @@ export class DefaultLogger implements Logger {
   }
 
   setLevel(level: LogLevel): void {
-    this.logLevel = level;
     this.level = this.parseLevel(level);
   }
 
@@ -66,8 +71,9 @@ export class DefaultLogger implements Logger {
     });
     if (level >= this.level) {
       const time = this.getCurrentTime();
+      const logLevel = mapLevel[level] || "";
       this.channel.appendLine(
-        `${time}\t${this.logLevel}\t${this.name}\t\t${args.join(" ")}`,
+        `${time}\t${logLevel}\t${this.name}\t\t${args.join(" ")}`,
       );
     }
   }

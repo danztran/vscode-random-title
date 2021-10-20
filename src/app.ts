@@ -1,8 +1,10 @@
 import * as vscode from "vscode";
 import { ExtensionContext } from "vscode";
-import { getQuotes, Quote, RequestQuotes } from "./quotable";
 import { DefaultLogger, LogLevel } from "./logger";
+import { getQuotes, Quote, RequestQuotes } from "./quotable";
 import { Storage } from "./storage/storage";
+import * as cp from "child_process";
+import * as path from "path";
 
 export class App extends DefaultLogger {
   private storage: Storage;
@@ -38,6 +40,12 @@ export class App extends DefaultLogger {
   }
 
   async randomTitle() {
+    const ok = await this.canSetTitle();
+    if (!ok) {
+      this.info("cannot set title");
+      return;
+    }
+
     this.fetchNewQuotes();
     const quote = this.getRandomQuote();
     const title = this.makeTitle(quote);
@@ -46,6 +54,12 @@ export class App extends DefaultLogger {
   }
 
   async previousTitle() {
+    const ok = await this.canSetTitle();
+    if (!ok) {
+      this.info("cannot set title");
+      return;
+    }
+
     const title = this.storage.getPreviousWorkspaceTitle();
     if (title === "") {
       vscode.window.showInformationMessage("No more previous title");
@@ -65,8 +79,7 @@ export class App extends DefaultLogger {
       return;
     }
     this.info("last updating at:", new Date(updatingAt).toLocaleString());
-
-    this.debug(`fetching new votes...`);
+    this.debug(`fetching new quotes...`);
     this.storage.setUpdatingAt(ts);
 
     const lastRes = this.storage.getLastResponseGetQuotes();
@@ -114,8 +127,9 @@ export class App extends DefaultLogger {
   }
 
   async updateTitle(title: string): Promise<void> {
-    const config = vscode.workspace.getConfiguration("window");
-    await config.update("title", title, false);
+    const { workspace } = vscode;
+    const config = workspace.getConfiguration("window");
+    await config.update("title", title, vscode.ConfigurationTarget.Workspace);
     await this.storage.saveWorkspaceTitle(title);
   }
 
@@ -135,5 +149,59 @@ export class App extends DefaultLogger {
   makeTitle(quote: Quote) {
     const title = `“${quote.content}” - ${quote.author}`;
     return title;
+  }
+
+  // canSetTitle check if we can change settings for current workspace without
+  // affect on scm. Return true if vscode in on workspace mode or vscode/settings.json
+  // is not a tracked file, return false otherwise.
+  async canSetTitle(): Promise<boolean> {
+    const { workspace } = vscode;
+    const { workspaceFile, workspaceFolders = [] } = workspace;
+
+    // vscode in single file mode
+    if (workspaceFolders.length === 0) {
+      this.debug("no workspace folder");
+      return false;
+    }
+
+    // vscode in workspace mode
+    if (workspaceFile) {
+      return true;
+    }
+
+    // vscode in single folder mode
+    // check if workspace settings is a git tracked file
+    const dir = workspaceFolders[0].uri.path;
+    const setpath = path.join(".vscode", "settings.json");
+    const command = `git ls-files ${setpath}`;
+
+    const { stdout, err } = await this.exec(command, {
+      cwd: dir,
+    });
+    const logs = `> command: ${command}\nstdout: ${stdout}\nerror: ${err}`;
+    if (err) {
+      this.error(logs);
+      return false;
+    }
+
+    this.debug(logs);
+    const isNotTracked = stdout.toString().trim() === "";
+    if (isNotTracked) {
+      return true;
+    }
+
+    return false;
+  }
+
+  private exec(cmd: string, opt: cp.ExecOptions | undefined) {
+    return new Promise<{
+      stdout: string | Buffer;
+      stderr: string | Buffer;
+      err: cp.ExecException | null;
+    }>(resolve => {
+      cp.exec(cmd, opt, (err, stdout, stderr) => {
+        return resolve({ stdout, stderr, err });
+      });
+    });
   }
 }

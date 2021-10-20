@@ -61,6 +61,7 @@
 	},
 	"scripts": {
 		"vscode:prepublish": "yarn esbuild-base -- --minify",
+		"vscode:install": "yarn compile && yarn vsce package -o out.vsix && code --install-extension out.vsix",
 		"compile": "tsc -p ./",
 		"watch": "tsc -watch -p ./",
 		"pretest": "yarn run compile && yarn run lint",
