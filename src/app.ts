@@ -164,33 +164,30 @@ export class App extends DefaultLogger {
       return false;
     }
 
-    // vscode in workspace mode
+    // vscode in workspace mode, free to modify workspace settings
     if (workspaceFile) {
       return true;
     }
 
     // vscode in single folder mode
-    // check if workspace settings is a git tracked file
+    // check if workspace settings file is ignored by git
     const dir = workspaceFolders[0].uri.path;
     const setpath = path.join(".vscode", "settings.json");
-    const command = `git ls-files ${setpath}`;
+    const command = `git check-ignore ${setpath}`;
 
     const { stdout, err } = await this.exec(command, {
       cwd: dir,
     });
     const logs = `> command: ${command}\nstdout: ${stdout}\nerror: ${err}`;
     if (err) {
+      // tracked or command failed
       this.error(logs);
       return false;
     }
 
     this.debug(logs);
-    const isNotTracked = stdout.toString().trim() === "";
-    if (isNotTracked) {
-      return true;
-    }
-
-    return false;
+    // file is ignored, we are free to modify it
+    return true;
   }
 
   private exec(cmd: string, opt: cp.ExecOptions | undefined) {
