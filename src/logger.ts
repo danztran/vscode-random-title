@@ -1,4 +1,4 @@
-import { OutputChannel } from "vscode";
+import { OutputChannel } from 'vscode';
 
 const DEBUG = 1;
 const INFO = 2;
@@ -6,15 +6,15 @@ const WARN = 3;
 const ERROR = 4;
 
 const mapLevel: Record<number, string> = {
-  1: "debug",
-  2: "info",
-  3: "warn",
-  4: "error",
+  [DEBUG]: 'debug',
+  [INFO]: 'info',
+  [WARN]: 'warn',
+  [ERROR]: 'error',
 };
 
 export type VoidFunc = (...args: unknown[]) => void;
 
-export type LogLevel = "info" | "debug" | "warn" | "error";
+export type LogLevel = 'info' | 'debug' | 'warn' | 'error';
 
 export interface Logger {
   info: VoidFunc;
@@ -32,7 +32,7 @@ export class DefaultLogger implements Logger {
   private channel: OutputChannel;
   private level: number = 1;
 
-  constructor({ name = "default", logLevel = "debug", channel }: LoggerProps) {
+  constructor({ name = 'default', logLevel = 'debug', channel }: LoggerProps) {
     this.name = name;
     this.debug = this.debug.bind(this);
     this.info = this.info.bind(this);
@@ -64,40 +64,40 @@ export class DefaultLogger implements Logger {
 
   private log(level: number, ...args: unknown[]): void {
     args = args.map(e => {
-      if (typeof e === "object") {
+      if (typeof e === 'object') {
         return JSON.stringify(e);
       }
       return e;
     });
     if (level >= this.level) {
       const time = this.getCurrentTime();
-      const logLevel = mapLevel[level] || "";
+      const logLevel = mapLevel[level] || '';
       this.channel.appendLine(
-        `${time}\t${logLevel}\t${this.name}\t\t${args.join(" ")}`,
+        `${time}\t${logLevel}\t${this.name}\t\t${args.join(' ')}`,
       );
     }
   }
 
   private getCurrentTime(): string {
     const d = new Date();
-    const format = (n: number) => n.toString().padStart(2, "0");
+    const format = (n: number) => n.toString().padStart(2, '0');
     const hr = format(d.getHours());
     const min = format(d.getMinutes());
     const sec = format(d.getSeconds());
-    const msec = d.getMilliseconds().toString().padEnd(3, "0");
+    const msec = d.getMilliseconds().toString().padEnd(3, '0');
     const s = `${hr}:${min}:${sec}.${msec}`;
     return s;
   }
 
-  private parseLevel(level = "debug"): number {
+  private parseLevel(level = 'debug'): number {
     switch (level.toLowerCase()) {
-      case "error":
+      case 'error':
         return 4;
-      case "warn":
+      case 'warn':
         return 3;
-      case "info":
+      case 'info':
         return 2;
-      case "debug":
+      case 'debug':
         return 1;
       default:
         return 0;

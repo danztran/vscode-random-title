@@ -2,20 +2,20 @@
 	"name": "vscode-random-title",
 	"displayName": "Random Title",
 	"description": "Random title for vscode.",
-  "publisher": "danztran",
+	"publisher": "danztran",
 	"version": "0.0.1",
 	"repository": {
 		"type": "git",
 		"url": "git://github.com/danztran/vscode-random-title.git"
 	},
 	"engines": {
-		"vscode": "^1.60.0"
+		"vscode": "^1.92.0"
 	},
 	"categories": [
 		"Other"
 	],
 	"activationEvents": [
-		"*"
+		"onStartupFinished"
 	],
 	"main": "./out/extension.js",
 	"contributes": {
@@ -60,31 +60,37 @@
 		]
 	},
 	"scripts": {
-		"vscode:prepublish": "yarn esbuild-base -- --minify",
-		"vscode:install": "yarn compile && yarn vsce package -o out.vsix && code --install-extension out.vsix",
-		"compile": "tsc -p ./",
-		"watch": "tsc -watch -p ./",
-		"pretest": "yarn run compile && yarn run lint",
+		"vscode:prepublish": "pnpm run package",
+		"vscode:install": "pnpm vscode:prepublish && pnpm vsce package -o out.vsix --no-dependencies && code --install-extension out.vsix",
+		"compile": "pnpm run check-types && pnpm run lint && node esbuild.js",
+		"watch": "npm-run-all -p watch:*",
+		"watch:esbuild": "node esbuild.js --watch",
+		"watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
+		"package": "pnpm run check-types && pnpm run lint && node esbuild.js --production",
+		"compile-tests": "tsc -p . --outDir out",
+		"watch-tests": "tsc -p . -w --outDir out",
+		"pretest": "pnpm run compile-tests && pnpm run compile && pnpm run lint",
+		"check-types": "tsc --noEmit",
 		"lint": "eslint src --ext ts",
-		"test": "node ./out/test/runTest.js",
-		"test-compile": "tsc -p ./",
-		"esbuild-base": "esbuild ./src/extension.ts --bundle --outfile=out/main.js --external:vscode --format=cjs --platform=node",
-		"esbuild": "yarn esbuild-base -- --sourcemap",
-		"esbuild-watch": "yarn esbuild-base -- --sourcemap --watch"
+		"test": "vscode-test"
 	},
 	"devDependencies": {
-		"@types/glob": "^7.1.4",
-		"@types/mocha": "^9.0.0",
-		"@types/node": "14.x",
-		"@types/vscode": "^1.60.0",
-		"@typescript-eslint/eslint-plugin": "^4.31.1",
-		"@typescript-eslint/parser": "^4.31.1",
-		"@vscode/test-electron": "^1.6.2",
-		"esbuild": "^0.13.3",
-		"eslint": "^7.32.0",
-		"glob": "^7.1.7",
-		"mocha": "^9.1.1",
-		"typescript": "^4.4.3",
-		"vsce": "^1.100.1"
-	}
+		"@types/glob": "^7.2.0",
+		"@vscode/vsce": "^2.31.1",
+		"glob": "^7.2.3",
+		"mocha": "^9.2.2",
+		"v8-compile-cache": "^2.4.0",
+		"@types/vscode": "^1.92.0",
+		"@types/mocha": "^10.0.7",
+		"@types/node": "20.x",
+		"@typescript-eslint/eslint-plugin": "^7.14.1",
+		"@typescript-eslint/parser": "^7.11.0",
+		"eslint": "^8.57.0",
+		"esbuild": "^0.21.5",
+		"npm-run-all": "^4.1.5",
+		"typescript": "^5.4.5",
+		"@vscode/test-cli": "^0.0.9",
+		"@vscode/test-electron": "^2.4.0"
+	},
+	"packageManager": "pnpm@9.7.0+sha512.dc09430156b427f5ecfc79888899e1c39d2d690f004be70e05230b72cb173d96839587545d09429b55ac3c429c801b4dc3c0e002f653830a420fa2dd4e3cf9cf"
 }
